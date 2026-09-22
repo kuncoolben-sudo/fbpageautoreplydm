@@ -67,10 +67,20 @@ def verify():
 @app.post("/webhook")
 def receive():
     raw = request.get_data()
-    if not _valid_signature(raw, request.headers.get("X-Hub-Signature-256", "")):
+    log.info("POST /webhook received, %d bytes", len(raw))
+
+    sig_header = request.headers.get("X-Hub-Signature-256", "")
+    if not _valid_signature(raw, sig_header):
+        log.warning(
+            "Signature check FAILED. header=%r app_secret_set=%s",
+            sig_header,
+            bool(APP_SECRET),
+        )
         abort(403)
 
+    log.info("Signature OK")
     payload = request.get_json(silent=True) or {}
+    log.info("Payload: %s", payload)
     if payload.get("object") == "page":
         for entry in payload.get("entry", []):
             for change in entry.get("changes", []):
